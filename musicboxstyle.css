@@ -1,0 +1,10 @@
+#input_notes {
+    overflow-y: scroll;
+    resize: none;
+    font-size: 16pt;
+}
+p {
+    font-size: 16pt;
+    font-family: monospace;
+    padding-left: 2px;
+}

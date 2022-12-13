@@ -1,0 +1,815 @@
+<!DOCTYPE html>
+<html lang ="en">
+<head>
+<title>Music Box</title>
+<link rel="stylesheet" href="musicboxstyle.css">
+<script
+    src="https://code.jquery.com/jquery-3.5.1.js"
+    integrity="sha256-QWo7LDvxbWT2tbbQ97B53yJnYU3WhH/C8ycbRAkjPDc="
+    crossorigin="anonymous">
+</script>
+    
+</head>
+    
+<body onload="setup()">
+
+<h1>Music Box Page</h1>
+
+<div>
+
+<!--
+A:0,12,24,36,48,60,72,84
+Bb:1,13,25,37,49,61,73,85
+B:2,14,26,38,50,62,74,86
+C:3,15,27,39,51,63,75,87
+C#:4,16,28,40,52,64,76
+D:5,17,29,41,53,65,77
+D#:6,18,30,42,54,66,78
+E:7,19,31,43,55,67,79
+F:8,20,32,44,56,68,80
+F#:9,21,33,45,57,69,81
+G:10,22,34,46,58,70,82
+G#:11,23,35,47,59,71,83
+-->
+<p>A BC D EF G A BC D EF G A BC D EF G A BC D EF G A BC D EF G A BC D EF G A BC D EF G A BC</p>
+<textarea id="input_notes" cols="86" rows="10">
+</textarea>
+        
+    
+    <button id="playButton" onclick="play_Song()">Play</button>
+    <input id="fileid" type="file" onChange="load_Song()" accept="text/plain" hidden/>
+    <input id="loadFile" type="button" value="Load"/>
+    <button onclick="save_Song()">Save</button>
+</div>
+
+<img src="pianokeys.png" alt="Piano Keys">
+
+<div>
+    <textarea id="outputTextBox" rows="30" cols="100"></textarea>
+    <button id="compileButton" onclick="compile_Code()">Compile</button>
+</div>
+
+<script>
+
+// Set up the connection between the fileid input and loadFile
+// The purpose of this is to make the button look clean and not bulky
+function setup() {
+    document.getElementById("loadFile").addEventListener("click", click_Browse);
+
+    // When Load Song.txt is clicked, user can choose a txt file that will be loaded into the input_notes text area
+    function click_Browse() {
+        document.getElementById("fileid").click();
+    }
+}
+
+// When the Load Song.txt button is pressed, user can choose a txt file and load it in the text area
+function load_Song() {
+    var file = document.getElementById("fileid").files[0];
+        var reader = new FileReader();
+        reader.onload = function (e) {
+            var textArea = document.getElementById("input_notes");
+            input_notes.value = e.target.result;
+        };
+        reader.readAsText(file);
+}
+
+// Saves and downloads the current song in the text area to a text file
+function save_Song() {
+    var text = document.getElementById("input_notes").value;
+    text = text.replace(/\n/g, "\r\n");
+    var blob = new Blob([text], { type: "text/plain"});
+    var anchor = document.createElement("a");
+    anchor.download = "song.txt";
+    anchor.href = window.URL.createObjectURL(blob);
+    anchor.target ="_blank";
+    anchor.style.display = "none";
+    document.body.appendChild(anchor);
+    anchor.click();
+    document.body.removeChild(anchor);
+}
+
+function get_Notes() {
+
+    // read in the textbox inputs and store the notes into a string array
+    notes_raw = $("#input_notes").val().split(/\r?\n/);
+    // a multi dimensional array to hold what note and what type of note each note is
+    var notes_parsed = [];
+
+    // Go through each line, and every possible note and store notes that the user input
+    for (index = 0; index < notes_raw.length; index++)
+    {
+        // Create a new array line for this line of notes
+        notes_parsed[index] = [];
+        // Go through all the possible keys
+        for (key = 0; key < 88; key++)
+        {
+            // Check if that key is pressed
+            switch(notes_raw[index][key])
+            {
+                // If current note is a whole note
+                case 'w':
+                    notes_parsed[index].push("w" + key);
+                    break;
+                // If current note is a half note
+                case 'h':
+                    notes_parsed[index].push("h" + key);
+                    break;
+                // If current note is a quarter note
+                case 'q':
+                    notes_parsed[index].push("q" + key);
+                    break;
+                // If current note is a one-eighth note
+                case 'e':
+                    notes_parsed[index].push("e" + key);
+                    break;
+                // If current note is a one-sixteenth note
+                case 's':
+                    notes_parsed[index].push("s" + key);
+                    break;
+            }
+        }
+    }
+    return notes_parsed;
+}
+
+
+function play_Song() {
+    
+    // Length of Note Reference
+    // Whole    = 'w'
+    // Half     = 'h'
+    // Quarter  = 'q'
+    // Eighth   = 'e'
+    // Sixteenth= 's'
+
+    // Todos
+    // Dotted Half =
+    // Dotted Quarter = 
+    // Dotted Eigth = 
+    // Dotted Sixteenth = 
+    
+    // Get the parsed array of notes
+    var notes_parsed = get_Notes();
+
+    // The time between each line is a 1/16th note
+    index_ms_offset = 125;
+
+    // Array for audio
+    var sounds = [];
+    var playIndex = 0;
+    var storeIndex = 0;
+    
+
+    // Go through the parsed array and play the notes from line to line
+    for (index = 0; index < notes_parsed.length; index++) 
+    {
+        // Go through each note on the same line that are to be played at the same time
+        for (note = 0; note < notes_parsed[index].length; note++)
+        {
+            // Get the key number
+            var num = notes_parsed[index][note].substring(1);
+            var noteNum;
+            // Find the key
+            switch(num)
+            {
+                case "0":
+                    noteNum = "A0";
+                    break;
+                case "1":
+                    noteNum = "Bb0";
+                    break;
+                case "2":
+                    noteNum = "B0";
+                    break;
+                case "3":
+                    noteNum = "C1";
+                    break;
+                case "4":
+                    noteNum = "Ct1";
+                    break;
+                case "5":
+                    noteNum = "D1";
+                    break;
+                case "6":
+                    noteNum = "Dt1"; 
+                    break;
+                case "7":
+                    noteNum = "E1";
+                    break;
+                case "8":
+                    noteNum = "F1";
+                    break;
+                case "9":
+                    noteNum = "Ft1";
+                    break;
+                case "10":
+                    noteNum = "G1";
+                    break;
+                case "11":
+                    noteNum = "Gt1";
+                    break;
+                case "12":
+                    noteNum = "A1";
+                    break;
+                case "13":
+                    noteNum = "Bb1";
+                    break;
+                case "14":
+                    noteNum = "B1";
+                    break;
+                case "15":
+                    noteNum = "C2";
+                    break;
+                case "16":
+                    noteNum = "Ct2";
+                    break;
+                case "17":
+                    noteNum = "D2";
+                    break;
+                case "18":
+                    noteNum = "Dt2"; 
+                    break;
+                case "19":
+                    noteNum = "E2";
+                    break;
+                case "20":
+                    noteNum = "F2";
+                    break;
+                case "21":
+                    noteNum = "Ft2";
+                    break;
+                case "22":
+                    noteNum = "G2";
+                    break;
+                case "23":
+                    noteNum = "Gt2";
+                    break;
+                case "24":
+                    noteNum = "A2";
+                    break;
+                case "25":
+                    noteNum = "Bb2";
+                    break;
+                case "26":
+                    noteNum = "B2";
+                    break;
+                case "27":
+                    noteNum = "C3";
+                    break;
+                case "28":
+                    noteNum = "Ct3";
+                    break;
+                case "29":
+                    noteNum = "D3";
+                    break;
+                case "30":
+                    noteNum = "Dt3"; 
+                    break;
+                case "31":
+                    noteNum = "E3";
+                    break;
+                case "32":
+                    noteNum = "F3";
+                    break;
+                case "33":
+                    noteNum = "Ft3";
+                    break;
+                case "34":
+                    noteNum = "G3";
+                    break;
+                case "35":
+                    noteNum = "Gt3";
+                    break;
+                case "36":
+                    noteNum = "A3";
+                    break;
+                case "37":
+                    noteNum = "Bb3";
+                    break;
+                case "38":
+                    noteNum = "B3";
+                    break;
+                case "39":
+                    noteNum = "C4";
+                    break;
+                case "40":
+                    noteNum = "Ct4";
+                    break;
+                case "41":
+                    noteNum = "D4";
+                    break;
+                case "42":
+                    noteNum = "Dt4"; 
+                    break;
+                case "43":
+                    noteNum = "E4";
+                    break;
+                case "44":
+                    noteNum = "F4";
+                    break;
+                case "45":
+                    noteNum = "Ft4";
+                    break;
+                case "46":
+                    noteNum = "G4";
+                    break;
+                case "47":
+                    noteNum = "Gt4";
+                    break;
+                case "48":
+                    noteNum = "A4";
+                    break;
+                case "49":
+                    noteNum = "Bb4";
+                    break;
+                case "50":
+                    noteNum = "B4";
+                    break;
+                case "51":
+                    noteNum = "C5";
+                    break;
+                case "52":
+                    noteNum = "Ct5";
+                    break;
+                case "53":
+                    noteNum = "D5";
+                    break;
+                case "54":
+                    noteNum = "Dt5"; 
+                    break;
+                case "55":
+                    noteNum = "E5";
+                    break;
+                case "56":
+                    noteNum = "F5";
+                    break;
+                case "57":
+                    noteNum = "Ft5";
+                    break;
+                case "58":
+                    noteNum = "G5";
+                    break;
+                case "59":
+                    noteNum = "Gt5";
+                    break;
+                case "60":
+                    noteNum = "A5";
+                    break;
+                case "61":
+                    noteNum = "Bb5";
+                    break;
+                case "62":
+                    noteNum = "B5";
+                    break;
+                case "63":
+                    noteNum = "C6";
+                    break;
+                case "64":
+                    noteNum = "Ct6";
+                    break;
+                case "65":
+                    noteNum = "D6";
+                    break;
+                case "66":
+                    noteNum = "Dt6"; 
+                    break;
+                case "67":
+                    noteNum = "E6";
+                    break;
+                case "68":
+                    noteNum = "F6";
+                    break;
+                case "69":
+                    noteNum = "Ft6";
+                    break;
+                case "70":
+                    noteNum = "G6";
+                    break;
+                case "71":
+                    noteNum = "Gt6";
+                    break;
+                case "72":
+                    noteNum = "A6";
+                    break;
+                case "73":
+                    noteNum = "Bb6";
+                    break;
+                case "74":
+                    noteNum = "B6";
+                    break;
+                case "75":
+                    noteNum = "C7";
+                    break;
+                case "76":
+                    noteNum = "Ct7";
+                    break;
+                case "77":
+                    noteNum = "D7";
+                    break;
+                case "78":
+                    noteNum = "Dt7"; 
+                    break;
+                case "79":
+                    noteNum = "E7";
+                    break;
+                case "80":
+                    noteNum = "F7";
+                    break;
+                case "81":
+                    noteNum = "Ft7";
+                    break;
+                case "82":
+                    noteNum = "G7";
+                    break;
+                case "83":
+                    noteNum = "Gt7";
+                    break;
+                case "84":
+                    noteNum = "A7";
+                    break;
+                case "85":
+                    noteNum = "Bb7";
+                    break;
+                case "86":
+                    noteNum = "B7";
+                    break;
+                case "87":
+                    noteNum = "C8";
+                    break;
+            }
+             
+            // If current note is a whole note
+            if (notes_parsed[index][note].includes('w')) {
+                sounds[storeIndex] = new Audio("Notes/w/" + noteNum + "w.mp3");
+                setTimeout( function() { sounds[playIndex].play(); playIndex++; }, index_ms_offset * index);
+                storeIndex++;
+            }
+            // If current note is a half note
+            else if (notes_parsed[index][note].includes('h')) {
+                sounds[storeIndex] = new Audio("Notes/h/" + noteNum + "h.mp3");
+                setTimeout( function() { sounds[playIndex].play(); playIndex++; }, index_ms_offset * index);
+                storeIndex++;
+            }
+            // If current note is a quarter note
+            else if (notes_parsed[index][note].includes('q')) {
+                sounds[storeIndex] = new Audio("Notes/q/" + noteNum + "q.mp3");
+                setTimeout( function() { sounds[playIndex].play(); playIndex++; }, index_ms_offset * index);
+                storeIndex++;
+            }
+            // If current note is an eighth note
+            else if (notes_parsed[index][note].includes('e')) {
+                sounds[storeIndex] = new Audio("Notes/e/" + noteNum + "e.mp3");
+                setTimeout( function() { sounds[playIndex].play(); playIndex++; }, index_ms_offset * index);
+                storeIndex++;
+            }
+            // If current note is a sixteenth note
+            else if (notes_parsed[index][note].includes('s')) {
+                sounds[storeIndex] = new Audio("Notes/s/" + noteNum + "s.mp3");
+                setTimeout( function() { sounds[playIndex].play(); playIndex++; }, index_ms_offset * index);
+                storeIndex++;
+            }
+        }
+    } 
+}
+
+
+function generate_Code() {
+    // Get the parsed array of notes
+    var notes_parsed = get_Notes();
+
+    // The time between each line
+    index_ms_offset = 125;
+
+    // String for code
+    var code = "";
+
+    // Go through the parsed array and generate code line to line
+    for (index = 0; index < notes_parsed.length; index++) 
+    {
+        // Go through each note on the same line that are to be played at the same time
+        for (note = 0; note < notes_parsed[index].length; note++)
+        {
+            // Get the key number
+            var num = notes_parsed[index][note].substring(1);
+            var noteNum;
+            // Find the key
+            switch(num)
+            {
+                case "0":
+                    noteNum = "A0";
+                    break;
+                case "1":
+                    noteNum = "Bb0";
+                    break;
+                case "2":
+                    noteNum = "B0";
+                    break;
+                case "3":
+                    noteNum = "C1";
+                    break;
+                case "4":
+                    noteNum = "Ct1";
+                    break;
+                case "5":
+                    noteNum = "D1";
+                    break;
+                case "6":
+                    noteNum = "Dt1"; 
+                    break;
+                case "7":
+                    noteNum = "E1";
+                    break;
+                case "8":
+                    noteNum = "F1";
+                    break;
+                case "9":
+                    noteNum = "Ft1";
+                    break;
+                case "10":
+                    noteNum = "G1";
+                    break;
+                case "11":
+                    noteNum = "Gt1";
+                    break;
+                case "12":
+                    noteNum = "A1";
+                    break;
+                case "13":
+                    noteNum = "Bb1";
+                    break;
+                case "14":
+                    noteNum = "B1";
+                    break;
+                case "15":
+                    noteNum = "C2";
+                    break;
+                case "16":
+                    noteNum = "Ct2";
+                    break;
+                case "17":
+                    noteNum = "D2";
+                    break;
+                case "18":
+                    noteNum = "Dt2"; 
+                    break;
+                case "19":
+                    noteNum = "E2";
+                    break;
+                case "20":
+                    noteNum = "F2";
+                    break;
+                case "21":
+                    noteNum = "Ft2";
+                    break;
+                case "22":
+                    noteNum = "G2";
+                    break;
+                case "23":
+                    noteNum = "Gt2";
+                    break;
+                case "24":
+                    noteNum = "A2";
+                    break;
+                case "25":
+                    noteNum = "Bb2";
+                    break;
+                case "26":
+                    noteNum = "B2";
+                    break;
+                case "27":
+                    noteNum = "C3";
+                    break;
+                case "28":
+                    noteNum = "Ct3";
+                    break;
+                case "29":
+                    noteNum = "D3";
+                    break;
+                case "30":
+                    noteNum = "Dt3"; 
+                    break;
+                case "31":
+                    noteNum = "E3";
+                    break;
+                case "32":
+                    noteNum = "F3";
+                    break;
+                case "33":
+                    noteNum = "Ft3";
+                    break;
+                case "34":
+                    noteNum = "G3";
+                    break;
+                case "35":
+                    noteNum = "Gt3";
+                    break;
+                case "36":
+                    noteNum = "A3";
+                    break;
+                case "37":
+                    noteNum = "Bb3";
+                    break;
+                case "38":
+                    noteNum = "B3";
+                    break;
+                case "39":
+                    noteNum = "C4";
+                    break;
+                case "40":
+                    noteNum = "Ct4";
+                    break;
+                case "41":
+                    noteNum = "D4";
+                    break;
+                case "42":
+                    noteNum = "Dt4"; 
+                    break;
+                case "43":
+                    noteNum = "E4";
+                    break;
+                case "44":
+                    noteNum = "F4";
+                    break;
+                case "45":
+                    noteNum = "Ft4";
+                    break;
+                case "46":
+                    noteNum = "G4";
+                    break;
+                case "47":
+                    noteNum = "Gt4";
+                    break;
+                case "48":
+                    noteNum = "A4";
+                    break;
+                case "49":
+                    noteNum = "Bb4";
+                    break;
+                case "50":
+                    noteNum = "B4";
+                    break;
+                case "51":
+                    noteNum = "C5";
+                    break;
+                case "52":
+                    noteNum = "Ct5";
+                    break;
+                case "53":
+                    noteNum = "D5";
+                    break;
+                case "54":
+                    noteNum = "Dt5"; 
+                    break;
+                case "55":
+                    noteNum = "E5";
+                    break;
+                case "56":
+                    noteNum = "F5";
+                    break;
+                case "57":
+                    noteNum = "Ft5";
+                    break;
+                case "58":
+                    noteNum = "G5";
+                    break;
+                case "59":
+                    noteNum = "Gt5";
+                    break;
+                case "60":
+                    noteNum = "A5";
+                    break;
+                case "61":
+                    noteNum = "Bb5";
+                    break;
+                case "62":
+                    noteNum = "B5";
+                    break;
+                case "63":
+                    noteNum = "C6";
+                    break;
+                case "64":
+                    noteNum = "Ct6";
+                    break;
+                case "65":
+                    noteNum = "D6";
+                    break;
+                case "66":
+                    noteNum = "Dt6"; 
+                    break;
+                case "67":
+                    noteNum = "E6";
+                    break;
+                case "68":
+                    noteNum = "F6";
+                    break;
+                case "69":
+                    noteNum = "Ft6";
+                    break;
+                case "70":
+                    noteNum = "G6";
+                    break;
+                case "71":
+                    noteNum = "Gt6";
+                    break;
+                case "72":
+                    noteNum = "A6";
+                    break;
+                case "73":
+                    noteNum = "Bb6";
+                    break;
+                case "74":
+                    noteNum = "B6";
+                    break;
+                case "75":
+                    noteNum = "C7";
+                    break;
+                case "76":
+                    noteNum = "Ct7";
+                    break;
+                case "77":
+                    noteNum = "D7";
+                    break;
+                case "78":
+                    noteNum = "Dt7"; 
+                    break;
+                case "79":
+                    noteNum = "E7";
+                    break;
+                case "80":
+                    noteNum = "F7";
+                    break;
+                case "81":
+                    noteNum = "Ft7";
+                    break;
+                case "82":
+                    noteNum = "G7";
+                    break;
+                case "83":
+                    noteNum = "Gt7";
+                    break;
+                case "84":
+                    noteNum = "A7";
+                    break;
+                case "85":
+                    noteNum = "Bb7";
+                    break;
+                case "86":
+                    noteNum = "B7";
+                    break;
+                case "87":
+                    noteNum = "C8";
+                    break;
+            }
+             
+            // If current note is a whole note
+            if (notes_parsed[index][note].includes('w')) {
+                code += "setTimeout(function() {(new Audio(" + "\"Notes/w/" + noteNum + "w.mp3\")).play();}," + index_ms_offset + " * " + index + ");\n";
+            }
+            // If current note is a half note
+            else if (notes_parsed[index][note].includes('h')) {
+                code += "setTimeout(function() {(new Audio(" + "\"Notes/h/" + noteNum + "h.mp3\")).play();}," + index_ms_offset + " * " + index + ");\n";
+            }
+            // If current note is a quarter note
+            else if (notes_parsed[index][note].includes('q')) {
+                code += "setTimeout(function() {(new Audio(" + "\"Notes/q/" + noteNum + "q.mp3\")).play();}," + index_ms_offset + " * " + index + ");\n";
+            }
+            // If current note is an eighth note
+            else if (notes_parsed[index][note].includes('e')) {
+                code += "setTimeout(function() {(new Audio(" + "\"Notes/e/" + noteNum + "e.mp3\")).play();}," + index_ms_offset + " * " + index + ");\n";
+            }
+            // If current note is a sixteenth note
+            else if (notes_parsed[index][note].includes('s')) {
+                code += "setTimeout(function() {(new Audio(" + "\"Notes/s/" + noteNum + "s.mp3\")).play();}," + index_ms_offset + " * " + index + ");\n";
+            }
+        }
+    }
+    return code; 
+}
+
+
+function compile_Code() {
+
+    var output  = "";
+    output += "<!DOCTYPE html>\n";
+    output += "<html lang =\"en\">\n";
+    output += "<body>\n";
+    output += "<h1>Music Box Page</h1>\n";
+    output += "<button id = \"playButton\" onclick=\"play_Song()\">Play</button>\n";
+    output += "<script>\n";
+    output += "function play_Song(){\n";
+    output += "@@@PLAY_MUSIC";
+    output += "}\n";
+    output += "<\/script>\n";
+    output += "</body>\n";
+    output += "</html>";
+
+    var song = generate_Code();
+    var fileOutput = output.replace("@@@PLAY_MUSIC", song);
+    var temp = document.getElementById("outputTextBox");
+    temp.value = fileOutput;
+}
+
+</script>
+
+</body>
+</html>
